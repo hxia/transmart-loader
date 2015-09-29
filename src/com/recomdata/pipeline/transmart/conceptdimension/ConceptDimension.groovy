@@ -18,42 +18,34 @@
  ******************************************************************/
   
 
-package com.recomdata.pipeline.transmart.i2b2
+package com.recomdata.pipeline.transmart.conceptdimension
 
 import org.apache.log4j.Logger;
 
 import groovy.sql.Sql
 
-abstract class I2b2 {
+abstract class ConceptDimension {
 
-	private static final Logger log = Logger.getLogger(I2b2)
+	private static final Logger log = Logger.getLogger(ConceptDimension)
 
-//	Properties props
-    Sql i2b2metadata
-	String studyName, i2b2metadataSchema
-//	Map visualAttrs
+	Sql i2b2demodata
+	String i2b2demodataSchema, studyName
 
-    abstract void insertI2b2(String c_hlevel, String c_fullnamne, String c_name, String c_visualattributes, String c_comment)
+    abstract void insertConceptDimension(ArrayList <HashMap<String, String>> concepts)
 
-    abstract void insertI2b2(String c_hlevel, String c_fullnamne, String c_basecode, String c_name, String c_visualattributes, String c_comment)
+	abstract void insertConceptDimension(HashMap<String, String> concept)
 
-    abstract void insertI2b2(ArrayList<HashMap<String, String>> concepts)
+	abstract boolean isConceptDimensionExist(String conceptPath)
 
-    abstract void insertI2b2(HashMap<String, String> concept)
-
-	abstract boolean isI2b2Exist(String conceptPath)
+	void setI2b2demodata(Sql i2b2demodata){
+		this.i2b2demodata = i2b2demodata
+	}
 
 	void setStudyName(String studyName){
 		this.studyName = studyName
 	}
 
-
-    void setI2b2metadata(Sql i2b2metadata){
-        this.i2b2metadata = i2b2metadata
-    }
-
-    void setI2b2metadataSchema(String i2b2metadataSchema){
-        this.i2b2metadataSchema = i2b2metadataSchema
+    void setI2b2demodataSchema(String i2b2demodataSchema){
+        this.i2b2demodataSchema = i2b2demodataSchema
     }
 }
-

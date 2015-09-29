@@ -1,16 +1,3 @@
---
--- Create Schema Script 
---   Database Version          : 11.2.0.1.0 
---   Database Compatible Level : 11.2.0.0.0 
---   Script Compatible Level   : 11.2.0.0.0 
---   Toad Version              : 12.1.0.22 
---   DB Connect String         : 10.118.255.5:1521/ORCL5 
---   Schema                    : AMAPP 
---   Script Created by         : BIOMART_USER 
---   Script Created at         : 7/17/2015 3:49:45 PM 
---   Physical Location         :  
---   Notes                     :  
---
 
 -- Object Counts: 
 --   Functions: 1       Lines of Code: 8 
@@ -129,19 +116,7 @@ CREATE TABLE AM_TAG_VALUE
 --
 -- SEQ_AMAPP_DATA_ID  (Sequence) 
 --
-CREATE SEQUENCE SEQ_AMAPP_DATA_ID
-  START WITH 1996295
-  MAXVALUE 999999999999999999999999999
-  MINVALUE 1
-  NOCYCLE
-  CACHE 20
-  NOORDER;
-
-
-
-
-
-
+CREATE SEQUENCE SEQ_AMAPP_DATA_ID;
 
 
 --

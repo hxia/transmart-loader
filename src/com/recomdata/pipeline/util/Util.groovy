@@ -18,31 +18,13 @@ class Util {
 
 
     /**
-     * load and combine common.properties with data specific property file
+     * load the provided property file and return a Properties Object for future use
      *
-     * @param file		data type specific property file
+     * @param file		a property file
      * @return
      * @throws IOException
      */
-    static Properties loadConfiguration() throws IOException {
-
-        Properties prop1 = new Properties();
-        FileInputStream fis = new FileInputStream("conf/transmart.properties");
-        prop1.load(fis);
-        fis.close();
-
-        return new ConfigSlurper().parse(prop1).toProperties()
-    }
-
-
-	/**
-	 * load and combine common.properties with data specific property file
-	 *  
-	 * @param file		data type specific property file
-	 * @return
-	 * @throws IOException
-	 */
-	static Properties loadConfiguration(String file) throws IOException {
+/*	static Properties loadConfiguration(String file) throws IOException {
 
 		Properties prop1 = new Properties();
 		FileInputStream fis = new FileInputStream("conf/Common.properties");
@@ -55,12 +37,53 @@ class Util {
 		prop2.load(fism);
 		fism.close();
 		def module = new ConfigSlurper().parse(prop2)
-		
+
 		def config = common.merge(module)
-		
+
 		return config.toProperties()
 	}
+*/
+    static Properties loadConfiguration(String conf) throws IOException {
 
+        Properties prop = new Properties();
+        FileInputStream fis = new FileInputStream(conf);
+        prop.load(fis);
+        fis.close();
+
+        return prop
+    }
+
+    /**
+     * load the default property file conf/transmart.properties
+     *
+     * @param file		data type specific property file
+     * @return
+     * @throws IOException
+     */
+    static Properties loadConfiguration() throws IOException {
+        return loadConfiguration("conf/transmart.properties");
+    }
+
+
+
+    /**
+     * load and combine two property files, and then return a Properties object
+     *
+     * @param conf1     the first configuration file
+     * @param conf2     the second configuration file
+     * @return          Properties Object
+     * @throws IOException
+     */
+    static Properties loadConfiguration(String conf1, String conf2) throws IOException {
+
+        Properties prop1 = loadConfiguration(conf1);
+        def part1 = new ConfigSlurper().parse(prop1)
+
+        Properties prop2 = loadConfiguration(conf2);
+        def part2 = new ConfigSlurper().parse(prop2)
+
+        return part1.merge(part2).toProperties()
+    }
 
 	/**
 	 *

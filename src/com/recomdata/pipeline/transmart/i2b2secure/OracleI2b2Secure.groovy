@@ -18,30 +18,13 @@
  ******************************************************************/
 
 
-package com.recomdata.pipeline.transmart.i2b2
+package com.recomdata.pipeline.transmart.i2b2secure
 
 import org.apache.log4j.Logger
 
-class OracleI2b2 extends I2b2 {
+class OracleI2b2Secure extends I2b2Secure {
 
-    private static final Logger log = Logger.getLogger(OracleI2b2)
-
-
-    void insertI2b2(ArrayList<HashMap<String, String>> concepts) {
-         concepts.each {
-             insertI2b2(it)
-         }
-    }
-
-    void insertI2b2(HashMap<String, String> concept) {
-        String c_hlevel = concept["C_HLEVEL"].toString()
-        String c_fullname = concept["C_FULLNAME"].toString().replace("/", "\\")
-        String c_basecode = concept["C_BASECODE"]
-        String c_name = concept["C_NAME"]
-        String c_visualAttributes = concept["C_VISUALATTRIBUTES"]
-
-        insertI2b2(c_hlevel, c_fullname, c_basecode, c_name, c_visualAttributes, "")
-    }
+    private static final Logger log = Logger.getLogger(OracleI2b2Secure)
 
 
     /**
@@ -69,9 +52,9 @@ class OracleI2b2 extends I2b2 {
      * @param c_visualattributes
      * @param c_comment
      */
-    void insertI2b2(String c_hlevel, String c_fullname, String c_name, String c_visualattributes, String c_comment) {
+    void insertI2b2Secure(String c_hlevel, String c_fullname, String c_name, String c_visualattributes, String c_comment) {
 
-        String qry = """ INSERT INTO I2B2 (c_hlevel, C_FULLNAME, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd,
+        String qry = """ INSERT INTO I2B2_SECURE (c_hlevel, C_FULLNAME, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd,
 								C_FACTTABLECOLUMN, C_TABLENAME, C_COLUMNNAME, C_DIMCODE, C_TOOLTIP,
 								SOURCESYSTEM_CD, C_OPERATOR, c_columndatatype, c_comment, i2b2_id)
 						 VALUES(?, ?, ?, ?, 'N',
@@ -79,28 +62,28 @@ class OracleI2b2 extends I2b2 {
 								?, ?, 'LIKE', 'T',
 								?, i2b2_id_seq.nextval)""";
 
-        if (isI2b2Exist(c_fullname)) {
-            log.info "$c_fullname already exists ..."
+        if (isI2b2SecureExist(c_fullname)) {
+            log.info "$c_fullname already exists in I2B2_SECURE ..."
         } else {
-            log.info "insert concept path: $c_fullname into I2B2 ..."
+            log.info "insert concept path: $c_fullname into I2B2_SECURE ..."
             i2b2metadata.execute(qry, [c_hlevel, c_fullname, c_name, c_visualattributes, c_fullname, c_fullname, studyName, c_comment])
         }
     }
 
 
-    void insertI2b2(String c_hlevel, String c_fullname, String c_basecode, String c_name, String c_visualattributes, String c_comment) {
+    void insertI2b2Secure(String c_hlevel, String c_fullname, String c_basecode, String c_name, String c_visualattributes, String c_comment) {
 
-        String qry = """ INSERT INTO I2B2 (c_hlevel, C_FULLNAME, C_BASECODE, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd,
+        String qry = """ INSERT INTO I2B2_SECURE (c_hlevel, C_FULLNAME, C_BASECODE, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd,
 								C_FACTTABLECOLUMN, C_TABLENAME, C_COLUMNNAME, C_DIMCODE, C_TOOLTIP,
 								SOURCESYSTEM_CD, C_OPERATOR, c_columndatatype, c_comment, update_date, i2b2_id)
 						 VALUES(?, ?, ?, ?, ?, 'N',
 							   'CONCEPT_CD', 'CONCEPT_DIMENSION', 'CONCEPT_PATH', ?, ?,
 								?, 'LIKE', 'T',	?, sysdate, i2b2_id_seq.nextval)""";
 
-        if (isI2b2Exist(c_fullname)) {
-            log.info "Concept \"$c_fullname\" already exists ..."
+        if (isI2b2SecureExist(c_fullname)) {
+            log.info "Concept \"$c_fullname\" already exists in I2B2_SECURE ..."
         } else {
-            log.info "Loading concept \"$c_fullname\" into I2B2 ..."
+            log.info "Loading concept \"$c_fullname\" into I2B2_SECURE ..."
             i2b2metadata.execute(qry, [c_hlevel, c_fullname, c_basecode, c_name, c_visualattributes, c_fullname, c_fullname, studyName, c_comment])
         }
     }
@@ -112,8 +95,8 @@ class OracleI2b2 extends I2b2 {
      * @param conceptPath
      * @return
      */
-    boolean isI2b2Exist(String conceptPath) {
-        String qry = "select count(*) from i2b2 where c_fullname=?"
+    boolean isI2b2SecureExist(String conceptPath) {
+        String qry = "select count(*) from i2b2_secure where c_fullname=?"
         def res = i2b2metadata.firstRow(qry, [conceptPath])
         if (res[0] > 0) return true
         else return false

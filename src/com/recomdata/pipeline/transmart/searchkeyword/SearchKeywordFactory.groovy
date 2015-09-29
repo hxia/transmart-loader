@@ -19,35 +19,35 @@
  ******************************************************************/
 
 
-package com.recomdata.pipeline.transmart.biodataextcode
+package com.recomdata.pipeline.transmart.searchkeyword
 
 import com.recomdata.pipeline.util.Util
 import groovy.sql.Sql
 import org.apache.log4j.Logger
 
-class BioDataExtCodeFactory {
+class SearchKeywordFactory {
 
-    private static final Logger log = Logger.getLogger(BioDataExtCodeFactory)
+    private static final Logger log = Logger.getLogger(SearchKeywordFactory)
 
-    BioDataExtCode createBioDataExtCode(Properties props) {
+    SearchKeyword createSearchKeyword(Properties props) {
 
         String databaseType = props.get("common.databaseType")
-        Sql biomart = Util.createSqlFromPropertyFile(props, databaseType, "biomart")
+        Sql searchapp = Util.createSqlFromPropertyFile(props, databaseType, "searchapp")
 
-        BioDataExtCode bioDataExtCode = getBioDataExtCode(databaseType)
-        bioDataExtCode.setBiomart(biomart)
+        SearchKeyword searchKeyword = getSearchKeyword(databaseType)
+        searchKeyword.setSearchapp(searchapp)
 
-        return bioDataExtCode
+        return searchKeyword
     }
 
 
-    public static BioDataExtCode getBioDataExtCode(String databaseType) {
+    public static SearchKeyword getSearchKeyword(String databaseType) {
         if (databaseType.equals("oracle")) {
-            return new OracleBioDataExtCode()
+            return new OracleSearchKeyword()
         } else if (databaseType.equals("netezza")) {
-            return new NetezzaBioDataExtCode()
+            return new NetezzaSearchKeyword()
         } else if (databaseType.equals("postgresql")) {
-            return new PostgresqlBioDataExtCode()
+            return new PostgresqlSearchKeyword()
         } else if (databaseType.equals("db2")) {
 //            loadDB2ConceptPaths(conceptPathToCode)
         } else {

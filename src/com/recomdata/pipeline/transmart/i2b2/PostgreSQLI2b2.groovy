@@ -19,137 +19,90 @@
   
 
 package com.recomdata.pipeline.transmart.i2b2
+import org.apache.log4j.Logger
 
-import org.apache.log4j.Logger;
+class PostgresqlI2b2 extends I2b2 {
 
-import groovy.sql.Sql
-
-class PostgreSQLI2b2 {
-
-	private static final Logger log = Logger.getLogger(PostgreSQLI2b2)
-
-	Sql i2b2metadata
-	String studyName
-	Map visualAttrs
+	private static final Logger log = Logger.getLogger(PostgresqlI2b2)
 
 
-    void loadConceptPaths(String databaseType, Map conceptPathToCode){
-        if(databaseType.equals("oracle")){
-            loadConceptPaths(conceptPathToCode)
-        } else if (databaseType.equals("netezza")){
-            loadNetezzaConceptPaths(conceptPathToCode)
-        } else if (databaseType.equals("postgresql")){
-//            loadPostgreSQLConceptPaths(conceptPathToCode)
-        }  else if(databaseType.equals("db2")){
-//            loadDB2ConceptPaths(conceptPathToCode)
-        }  else {
-            log.info("The database $databaseType is not supported.")
+    void insertI2b2(ArrayList<HashMap<String, String>> concepts) {
+        concepts.each {
+            insertI2b2(it)
         }
     }
 
+    void insertI2b2(HashMap<String, String> concept) {
+        String c_hlevel = concept["C_HLEVEL"].toString()
+        String c_fullname = concept["C_FULLNAME"].toString().replace("/", "\\")
+        String c_basecode = concept["C_BASECODE"]
+        String c_name = concept["C_NAME"]
+        String c_visualAttributes = concept["C_VISUALATTRIBUTES"]
 
-    void loadNetezzaConceptPaths(Map conceptPathToCode){
-
-        conceptPathToCode.each{key, val ->
-            loadNetezzaConceptPath(key, val)
-        }
+        insertI2b2(c_hlevel, c_fullname, c_basecode, c_name, c_visualAttributes, "")
     }
 
-	void loadConceptPaths(Map conceptPathToCode){
 
-		conceptPathToCode.each{key, val ->
-			loadConceptPath(key, val)
-		}
-	}
+    /**
+     * add a concept into i2b2metadata.i2b2 table, and make sure the sequence i2b2metadata.seq_c_basecoe exists
+     *  and has the following trigger in place:
+     *
 
+     DROP TRIGGER I2B2METADATA.TRG_I2B2_C_BASECODE;
 
-    void loadNetezzaConceptPath(String conceptPath, String conceptCode){
+     CREATE OR REPLACE TRIGGER I2B2METADATA.TRG_I2B2_C_BASECODE
+     before insert ON I2B2METADATA.I2B2
+     for each row
+     begin
+     if inserting then
+     if :NEW."C_BASECODE" is null then
+     select SEQ_C_BASECODE.nextval into :NEW."C_BASECODE" from dual;
+     end if;
+     end if;
+     end;
+     /
 
-        String qry = """ INSERT INTO I2B2 (C_HLEVEL, C_FULLNAME, C_NAME, C_SYNONYM_CD, C_VISUALATTRIBUTES, C_TOTALNUM,
-								C_BASECODE, C_METADATAXML, C_FACTTABLECOLUMN, C_TABLENAME, C_COLUMNNAME, C_COLUMNDATATYPE,
-								C_OPERATOR, C_DIMCODE, C_COMMENT, C_TOOLTIP, M_APPLIED_PATH, UPDATE_DATE, DOWNLOAD_DATE, IMPORT_DATE,
-								SOURCESYSTEM_CD, VALUETYPE_CD, M_EXCLUSION_CD, C_PATH, C_SYMBOL)
-						 VALUES(?, ?, ?, 'N', ?, 0,
-							   ?, null, 'CONCEPT_CD', 'CONCEPT_DIMENSION', 'CONCEPT_PATH', 'T',
-							   'LIKE', ?, ?, ?, '@', now(), now(), now(),
-							   ?, null, null, null, null)""";
+     * @param c_hlevel
+     * @param c_fullname
+     * @param c_name
+     * @param c_visualattributes
+     * @param c_comment
+     */
+    void insertI2b2(String c_hlevel, String c_fullname, String c_name, String c_visualattributes, String c_comment) {
 
-        String [] str = conceptPath.split("/")
-        int c_hlevel = str.size() - 2
-        String c_name = str[str.size() - 1]
-        String path = conceptPath.replace("/", "\\")
-        String c_comment = "trial:" + studyName
-        String visualAttr = visualAttrs[conceptPath]
-
-        if(isI2b2Exist(path)){
-            log.info "$conceptPath already exists ..."
-        }else{
-            log.info "insert concept path: $conceptPath into Netezza I2B2 ..."
-            i2b2metadata.execute(qry, [c_hlevel, path, c_name, visualAttr, conceptCode, path, c_comment, path, studyName])
-        }
-    }
-
-	
-	void loadConceptPath(String conceptPath, String conceptCode){
-
-		String qry = """ INSERT INTO I2B2 (c_hlevel, C_FULLNAME, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd,
+        String qry = """ INSERT INTO I2B2 (c_hlevel, C_FULLNAME, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd,
 								C_FACTTABLECOLUMN, C_TABLENAME, C_COLUMNNAME, C_DIMCODE, C_TOOLTIP,
-								SOURCESYSTEM_CD, c_basecode, C_OPERATOR, c_columndatatype, c_comment, i2b2_id)
-						 VALUES(?, ?, ?, ?, 'N',  
+								SOURCESYSTEM_CD, C_OPERATOR, c_columndatatype, c_comment, i2b2_id)
+						 VALUES(?, ?, ?, ?, 'N',
 							   'CONCEPT_CD', 'CONCEPT_DIMENSION', 'CONCEPT_PATH', ?, ?,
 								?, ?, 'LIKE', 'T',
 								?, i2b2_id_seq.nextval)""";
 
-		String [] str = conceptPath.split("/")
-		int c_hlevel = str.size() - 2
-		String c_name = str[str.size() - 1]
-		String path = conceptPath.replace("/", "\\")
-		String c_comment = "trial:" + studyName
-		String visualAttr = visualAttrs[conceptPath]
-		
-		if(isI2b2Exist(path)){
-			log.info "$conceptPath already exists ..."
-		}else{
-			log.info "insert concept path: $conceptPath into I2B2 ..."
-			i2b2metadata.execute(qry, [c_hlevel, path, c_name, visualAttr, path, path, studyName, conceptCode, c_comment])
-		}
-	}
+        if (isI2b2Exist(c_fullname)) {
+            log.info "$c_fullname already exists ..."
+        } else {
+            log.info "insert concept path: $c_fullname into I2B2 ..."
+            i2b2metadata.execute(qry, [c_hlevel, c_fullname, c_name, c_visualattributes, c_fullname, c_fullname, studyName, c_comment])
+        }
+    }
 
-	/**
-	 * insert I2B2 through selecting from concept_dimension and is copied from Jean's Store Procedure: I2B2_ADD_NODE 
-	 * 
-	 create or replace TRIGGER "TRG_I2B2_C_BASECODE"
-	 before insert on "I2B2"
-	 for each row begin
-	 if inserting then
-	 if :NEW."C_BASECODE" is null then
-	 select TM_CZ.CONCEPT_ID.nextval into :NEW."C_BASECODE" from dual;
-	 end if;
-	 end if;
-	 end;
-	 */
 
-	void insertI2B2(String conceptPath){
+    void insertI2b2(String c_hlevel, String c_fullname, String c_basecode, String c_name, String c_visualattributes, String c_comment) {
 
-		String qry = """ INSERT INTO I2B2 (c_hlevel, C_FULLNAME, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd, 
-								C_FACTTABLECOLUMN, C_TABLENAME, C_COLUMNNAME, C_DIMCODE, C_TOOLTIP, 
-								SOURCESYSTEM_CD, c_basecode, C_OPERATOR, c_columndatatype, c_comment, i2b2_id)
-	                     SELECT (length(concept_path) - nvl(length(replace(concept_path, '\')),0))/length('\') - 2 + root_level,
-								CONCEPT_PATH, NAME_CHAR, 'FA', 'N',
-		 						'CONCEPT_CD', 'CONCEPT_DIMENSION', 'CONCEPT_PATH', CONCEPT_PATH, CONCEPT_PATH,
-		 						SOURCESYSTEM_CD, CONCEPT_CD, 'LIKE', 'T', 
-		 						decode(TrialId,null,null,'trial:' || TrialID), i2b2_id_seq.nextval
-					     FROM CONCEPT_DIMENSION
-						 WHERE CONCEPT_PATH = ?""";
+        String qry = """ INSERT INTO I2B2 (c_hlevel, C_FULLNAME, C_BASECODE, C_NAME, C_VISUALATTRIBUTES, c_synonym_cd,
+								C_FACTTABLECOLUMN, C_TABLENAME, C_COLUMNNAME, C_DIMCODE, C_TOOLTIP,
+								SOURCESYSTEM_CD, C_OPERATOR, c_columndatatype, c_comment, update_date, i2b2_id)
+						 VALUES(?, ?, ?, ?, ?, 'N',
+							   'CONCEPT_CD', 'CONCEPT_DIMENSION', 'CONCEPT_PATH', ?, ?,
+								?, 'LIKE', 'T',	?, sysdate, i2b2_id_seq.nextval)""";
 
-		if(isI2b2Exist(conceptPath)){
-			log.info "$conceptPath already exists ..."
-		}else{
-			log.info "insert concept path: $conceptPath into I2B2 ..."
-			i2b2metadata.execute(qry, [conceptPath])
-		}
-	}
-
+        if (isI2b2Exist(c_fullname)) {
+            log.info "Concept \"$c_fullname\" already exists ..."
+        } else {
+            log.info "Loading concept \"$c_fullname\" into I2B2 ..."
+            i2b2metadata.execute(qry, [c_hlevel, c_fullname, c_basecode, c_name, c_visualattributes, c_fullname, c_fullname, studyName, c_comment])
+        }
+    }
 
 
 	boolean isI2b2Exist(String conceptPath){
@@ -157,21 +110,6 @@ class PostgreSQLI2b2 {
 		def res = i2b2metadata.firstRow(qry, [conceptPath])
 		if(res[0] > 0) return true
 		else return false
-	}
-
-
-	void setI2b2metadata(Sql i2b2metadata){
-		this.i2b2metadata = i2b2metadata
-	}
-
-
-	void setStudyName(String studyName){
-		this.studyName = studyName
-	}
-	
-	
-	void setVisualAttrs(Map visualAttrs){
-		this.visualAttrs = visualAttrs
 	}
 }
 

@@ -18,30 +18,41 @@
  ******************************************************************/
   
 
-package com.recomdata.pipeline.transmart.i2b2
+package com.recomdata.pipeline.transmart.i2b2secure
 
 import org.apache.log4j.Logger;
 
 import groovy.sql.Sql
 
-abstract class I2b2 {
+abstract class I2b2Secure {
 
-	private static final Logger log = Logger.getLogger(I2b2)
+	private static final Logger log = Logger.getLogger(I2b2Secure)
 
-//	Properties props
     Sql i2b2metadata
 	String studyName, i2b2metadataSchema
-//	Map visualAttrs
 
-    abstract void insertI2b2(String c_hlevel, String c_fullnamne, String c_name, String c_visualattributes, String c_comment)
+    abstract void insertI2b2Secure(String c_hlevel, String c_fullnamne, String c_name, String c_visualattributes, String c_comment)
 
-    abstract void insertI2b2(String c_hlevel, String c_fullnamne, String c_basecode, String c_name, String c_visualattributes, String c_comment)
+    abstract void insertI2b2Secure(String c_hlevel, String c_fullnamne, String c_basecode, String c_name, String c_visualattributes, String c_comment)
 
-    abstract void insertI2b2(ArrayList<HashMap<String, String>> concepts)
+	abstract boolean isI2b2SecureExist(String conceptPath)
 
-    abstract void insertI2b2(HashMap<String, String> concept)
 
-	abstract boolean isI2b2Exist(String conceptPath)
+    void insertI2b2Secure(ArrayList<HashMap<String, String>> concepts) {
+        concepts.each {
+            insertI2b2Secure(it)
+        }
+    }
+
+    void insertI2b2Secure(HashMap<String, String> concept) {
+        String c_hlevel = concept["C_HLEVEL"].toString()
+        String c_fullname = concept["C_FULLNAME"].toString().replace("/", "\\")
+        String c_basecode = concept["C_BASECODE"]
+        String c_name = concept["C_NAME"]
+        String c_visualAttributes = concept["C_VISUALATTRIBUTES"]
+
+        insertI2b2Secure(c_hlevel, c_fullname, c_basecode, c_name, c_visualAttributes, "")
+    }
 
 	void setStudyName(String studyName){
 		this.studyName = studyName

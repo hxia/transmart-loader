@@ -22,7 +22,8 @@ package com.recomdata.pipeline.transmart.biomarker
 
 import org.apache.log4j.Logger
 
-class PostgresqlBioMarker extends BioMarker {
+//class PostgresqlBioMarker extends BioMarker {
+class PostgresqlBioMarker  {
 
     private static final Logger log = Logger.getLogger(PostgresqlBioMarker)
 

@@ -24,36 +24,22 @@ package com.recomdata.pipeline.transmart.searchkeyword
 import groovy.sql.Sql
 import org.apache.log4j.Logger
 
-class SearchKeyword {
+abstract class SearchKeyword {
 
     private static final Logger log = Logger.getLogger(SearchKeyword)
 
     Sql searchapp
     String dataCategory, sourceCode, displayDataCategory
 
+    abstract void insertSearchKeyword4Gene()
 
-    void loadNetezzaPathwaySearchKeyword(String primarySourceCode) {
+    abstract void insertSearchKeyword4Pathway()
 
-        log.info "Start loading search keyword for pathways in Netezza ... "
+    abstract void insertSearchKeyword4Disease()
 
-        String qry = """ insert into search_keyword (SEARCH_KEYWORD_ID, keyword, bio_data_id, unique_id, data_category,
-							   source_code, display_data_category)
-						 select next value for SEQ_SEARCH_DATA_ID, t.keyword, t.bio_data_id, t.unique_id,
-						        t.data_category, t.primary_source_code, t.display_data_category
-						 from (
-                              select distinct bio_marker_name as keyword, bio_marker_id as bio_data_id,
-                                    'PATHWAY:'||primary_source_code||':'||organism||':'||primary_external_id as unique_id,
-                                    'PATHWAY' as data_category, primary_source_code, 'Pathway' as display_data_category
-                              from biomart.bio_marker
-                              where bio_marker_type='PATHWAY' and primary_source_code=?
-                                  and 'PATHWAY:'||primary_source_code||':'||upper(organism)||':'||primary_external_id not in
-                                    (select upper(unique_id) from search_keyword where data_category='PATHWAY')
-                          ) t
-                      """
-        searchapp.execute(qry, [primarySourceCode])
+    abstract void insertSearchKeyword4Compound()
 
-        log.info "End loading search keyword for pathways in Netezza ... "
-    }
+    abstract void insertSearchKeyword4Experiment()
 
     /**
      *   could come from either de_pathway or bio_marker
@@ -86,43 +72,6 @@ class SearchKeyword {
         log.info "End loading search keyword for pathways in Oracle ... "
     }
 
-
-    void loadGeneSearchKeyword(String databaseType) {
-        if (databaseType.equals("oracle")) {
-            loadGeneSearchKeyword()
-        } else if (databaseType.equals("netezza")) {
-            loadNetezzaGeneSearchKeyword()
-        } else {
-            log.info "Database $databaseType is not supported."
-        }
-
-    }
-
-    void loadNetezzaGeneSearchKeyword() {
-
-        log.info "Start loading search keyword for genes ... "
-
-        //String qry = "delete from search_keyword where data_category='GENE'"
-        //searchapp.execute(qry)
-
-        String qry = """ insert into search_keyword (SEARCH_KEYWORD_ID, keyword, bio_data_id, unique_id, data_category,
-							   source_code, display_data_category)
-					     select next value for SEQ_SEARCH_DATA_ID, t.keyword, t.bio_data_id, t.unique_id,
-                                t.data_category, t.source_code, t.display_data_category
-                         from (
-                              select distinct bio_marker_name as keyword, bio_marker_id as bio_data_id,
-                                    'GENE:'||primary_external_id as unique_id, 'GENE' as data_category,
-                                    '' as source_code, 'Gene' as display_data_category
-                              from biomart.bio_marker
-                              where bio_marker_type='GENE' and upper(organism)='HOMO SAPIENS' and 'GENE:'||primary_external_id not in
-                                     (select unique_id from search_keyword where data_category='GENE')
-				         ) t
-		      """
-        searchapp.execute(qry)
-
-        log.info "Start loading search keyword for genes ... "
-    }
-
     void loadGeneSearchKeyword() {
 
         log.info "Start loading search keyword for genes ... "
@@ -141,7 +90,6 @@ class SearchKeyword {
 
         log.info "Start loading search keyword for genes ... "
     }
-
 
     void loadOmicsoftGSESearchKeyword(String biomart) {
 
@@ -164,7 +112,6 @@ class SearchKeyword {
         log.info "Start loading search keyword for Omicsoft GSEs ... "
     }
 
-
     void loadOmicsoftCompoundSearchKeyword() {
 
         log.info "Start deleting search keyword for Omicsoft compounds ... "
@@ -186,7 +133,6 @@ class SearchKeyword {
         log.info "Start loading search keyword for Omicsoft compounds ... "
     }
 
-
     void loadOmicsoftDiseaseSearchKeyword(String biomart) {
 
         log.info "Start deleting search keyword for Omicsoft diseases ... "
@@ -207,16 +153,6 @@ class SearchKeyword {
 
         log.info "End loading search keyword for Omicsoft diseases ... "
     }
-
-
-    void loadOmicsoftCompoundSearchKeyword(String biomart) {
-
-        log.info "Start deleting search keyword for Omicsoft diseases ... "
-        //searchapp.execute(qry)
-
-        log.info "End loading search keyword for Omicsoft diseases ... "
-    }
-
 
     void insertSearchKeyword(String keyword, long bioDataId, String externalId) {
 
@@ -242,7 +178,6 @@ class SearchKeyword {
         }
     }
 
-
     boolean isSearchKeywordExist(String keyword) {
         String qry = "select count(*) from search_keyword where keyword=? and data_category=?"
         def res = searchapp.firstRow(qry, [keyword, dataCategory])
@@ -250,32 +185,11 @@ class SearchKeyword {
         else return false
     }
 
-
     long getSearchKeywordId(String keyword) {
         String qry = """ select search_keyword_id from search_keyword
 						 where keyword=? and data_category=? """
         def res = searchapp.firstRow(qry, [keyword, dataCategory])
         if (res.equals(null)) return 0
         else return res[0]
-    }
-
-
-    void setDisplayDataCategory(String displayDataCategory) {
-        this.displayDataCategory = displayDataCategory
-    }
-
-
-    void setSourceCode(String sourceCdoe) {
-        this.sourceCode = sourceCdoe
-    }
-
-
-    void setDataCategory(String dataCategory) {
-        this.dataCategory = dataCategory
-    }
-
-
-    void setSearchapp(Sql searchapp) {
-        this.searchapp = searchapp
     }
 }

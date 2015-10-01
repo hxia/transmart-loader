@@ -25,68 +25,18 @@ import groovy.sql.Sql;
 
 import org.apache.log4j.Logger;
 
-class BioDataExtCode {
+abstract class BioDataExtCode {
 
 	private static final Logger log = Logger.getLogger(BioDataExtCode)
 
 	Sql biomart
 
-	/**
-	 * 
-	 * @param extCodeMap 	code -> bio_data_type	bio_data_ext_code_id
-	 */
-	void loadBioDataExtCode(Map extCodeMap){
+    abstract void insertEntrezBioDataExtCode(String synonymTable)
 
-		String code, dataType, qry
-		long bioDataId
-		
-		extCodeMap.each{ k, v ->
-			code = k
-			dataType = v.split("\t")[0]
-			bioDataId = Integer.parseInt(v.split("\t")[1])
+	abstract void loadBioDataExtCode(Map extCodeMap)
 
-			if(isBioDataExtCodeExist(dataType, bioDataId)){
-				log.info "(\"$code\", $dataType) already exists in BIO_DATA_EXT_CODE ..."
-			}else{
-				log.info "Load (\"$code\", $dataType) into BIO_DATA_EXT_CODE ..."
+	abstract boolean isBioDataExtCodeExist(long bioDataId)
 
-				qry = """ insert into bio_data_ext_code(code, code_source, code_type, bio_data_type, bio_data_id) values(?, ?, ?, ?, ?) """
-				biomart.execute(qry, [
-					code,
-					'Alias',
-					'SYNONYM',
-					dataType,
-					bioDataId
-				])
-			}
-		}
-	}
+	abstract boolean isBioDataExtCodeExist(String dataType, long bioDataId)
 
-
-	boolean isBioDataExtCodeExist(long bioDataId){
-		String qry = "select count(1) from bio_data_ext_code where bio_data_id=?"
-		if(biomart.firstRow(qry, [bioDataId])[0] > 0){
-			return true
-		}else{
-			return false
-		}
-	}
-
-
-	boolean isBioDataExtCodeExist(String dataType, long bioDataId){
-		String qry = "select count(1) from bio_data_ext_code where bio_data_type=? and bio_data_id=?"
-		if(biomart.firstRow(qry, [
-			dataType,
-			bioDataId
-		])[0] > 0){
-			return true
-		}else{
-			return false
-		}
-	}
-
-
-	void setBiomart(Sql biomart){
-		this.biomart = biomart
-	}
 }

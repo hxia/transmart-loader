@@ -18,51 +18,13 @@
  *
  ******************************************************************/
 
-
 package com.recomdata.pipeline.transmart.searchkeyword
 
-import groovy.sql.Sql
 import org.apache.log4j.Logger
 
-class OracleSearchKeyword {
+class OracleSearchKeyword extends SearchKeyword {
 
     private static final Logger log = Logger.getLogger(OracleSearchKeyword)
-
-    Sql searchapp
-    String dataCategory, sourceCode, displayDataCategory
-
-    void loadPathwaySearchKeyword(String databaseType, String primarySourceCode) {
-        if (databaseType.equals("oracle")) {
-            loadPathwaySearchKeyword(primarySourceCode)
-        } else if (databaseType.equals("netezza")) {
-            loadNetezzaPathwaySearchKeyword(primarySourceCode)
-        } else {
-            log.info "Database $databaseType is not supported."
-        }
-    }
-
-    void loadNetezzaPathwaySearchKeyword(String primarySourceCode) {
-
-        log.info "Start loading search keyword for pathways in Netezza ... "
-
-        String qry = """ insert into search_keyword (SEARCH_KEYWORD_ID, keyword, bio_data_id, unique_id, data_category,
-							   source_code, display_data_category)
-						 select next value for SEQ_SEARCH_DATA_ID, t.keyword, t.bio_data_id, t.unique_id,
-						        t.data_category, t.primary_source_code, t.display_data_category
-						 from (
-                              select distinct bio_marker_name as keyword, bio_marker_id as bio_data_id,
-                                    'PATHWAY:'||primary_source_code||':'||organism||':'||primary_external_id as unique_id,
-                                    'PATHWAY' as data_category, primary_source_code, 'Pathway' as display_data_category
-                              from biomart.bio_marker
-                              where bio_marker_type='PATHWAY' and primary_source_code=?
-                                  and 'PATHWAY:'||primary_source_code||':'||upper(organism)||':'||primary_external_id not in
-                                    (select upper(unique_id) from search_keyword where data_category='PATHWAY')
-                          ) t
-                      """
-        searchapp.execute(qry, [primarySourceCode])
-
-        log.info "End loading search keyword for pathways in Netezza ... "
-    }
 
     /**
      *   could come from either de_pathway or bio_marker
@@ -76,7 +38,7 @@ class OracleSearchKeyword {
      * 		delete from search_keyword where data_category='PATHWAY';
      *
      */
-    void loadPathwaySearchKeyword(String primarySourceCode) {
+    void insertSearchKeyword4Pathway() {
 
         log.info "Start loading search keyword for pathways in Oracle ... "
 
@@ -86,58 +48,19 @@ class OracleSearchKeyword {
 						'PATHWAY:'||primary_source_code||':'||organism||':'||primary_external_id, 
    				        'PATHWAY', primary_source_code, 'Pathway'
 			      from biomart.bio_marker
-			      where bio_marker_type='PATHWAY' and primary_source_code=?
+			      where bio_marker_type='PATHWAY'
 					  and 'PATHWAY:'||primary_source_code||':'||upper(organism)||':'||primary_external_id not in
 			          	(select to_char(upper(unique_id)) from search_keyword where data_category='PATHWAY')
 			  """
-        searchapp.execute(qry, [primarySourceCode])
+        searchapp.execute(qry)
 
         log.info "End loading search keyword for pathways in Oracle ... "
     }
 
 
-    void loadGeneSearchKeyword(String databaseType) {
-        if (databaseType.equals("oracle")) {
-            loadGeneSearchKeyword()
-        } else if (databaseType.equals("netezza")) {
-            loadNetezzaGeneSearchKeyword()
-        } else {
-            log.info "Database $databaseType is not supported."
-        }
+    void insertSearchKeyword4Gene() {
 
-    }
-
-    void loadNetezzaGeneSearchKeyword() {
-
-        log.info "Start loading search keyword for genes ... "
-
-        //String qry = "delete from search_keyword where data_category='GENE'"
-        //searchapp.execute(qry)
-
-        String qry = """ insert into search_keyword (SEARCH_KEYWORD_ID, keyword, bio_data_id, unique_id, data_category,
-							   source_code, display_data_category)
-					     select next value for SEQ_SEARCH_DATA_ID, t.keyword, t.bio_data_id, t.unique_id,
-                                t.data_category, t.source_code, t.display_data_category
-                         from (
-                              select distinct bio_marker_name as keyword, bio_marker_id as bio_data_id,
-                                    'GENE:'||primary_external_id as unique_id, 'GENE' as data_category,
-                                    '' as source_code, 'Gene' as display_data_category
-                              from biomart.bio_marker
-                              where bio_marker_type='GENE' and upper(organism)='HOMO SAPIENS' and 'GENE:'||primary_external_id not in
-                                     (select unique_id from search_keyword where data_category='GENE')
-				         ) t
-		      """
-        searchapp.execute(qry)
-
-        log.info "Start loading search keyword for genes ... "
-    }
-
-    void loadGeneSearchKeyword() {
-
-        log.info "Start loading search keyword for genes ... "
-
-        //String qry = "delete from search_keyword where data_category='GENE'"
-        //searchapp.execute(qry)
+        log.info "Start loading Entrez genes into search_keyword ... "
 
         String qry = """ insert into search_keyword (keyword, bio_data_id, unique_id, data_category,
 							   source_code, display_data_category)
@@ -148,11 +71,11 @@ class OracleSearchKeyword {
 		      """
         searchapp.execute(qry)
 
-        log.info "Start loading search keyword for genes ... "
+        log.info "End loading Entrez genes into table search_keyword ... "
     }
 
 
-    void loadOmicsoftGSESearchKeyword(String biomart) {
+    void insertSearchKeyword4Experiment() {
 
         log.info "Start deleting search keyword for Omicsoft GSEs ... "
 
@@ -161,20 +84,21 @@ class OracleSearchKeyword {
         //searchapp.execute(qry)
 
 
-        log.info "Start inserting search keyword for Omicsoft GSEs ... "
+        log.info "Start loading experiments into table search_keyword ... "
 
         qry = """ insert into search_keyword (keyword, bio_data_id, unique_id, data_category, display_data_category)
 				  select distinct accession, bio_experiment_id, 'Omicsoft: '||accession, 'STUDY', 'GEO'
-				  from ${biomart}.bio_experiment
+				  from bio_experiment
 				  where accession not in (select keyword from search_keyword)
 			  """
+
         searchapp.execute(qry)
 
-        log.info "Start loading search keyword for Omicsoft GSEs ... "
+        log.info "Start loading experiments into table search_keyword ... "
     }
 
 
-    void loadOmicsoftCompoundSearchKeyword() {
+    void insertSearchKeyword4Compound() {
 
         log.info "Start deleting search keyword for Omicsoft compounds ... "
 
@@ -182,21 +106,25 @@ class OracleSearchKeyword {
         //searchapp.execute(qry)
 
 
-        log.info "Start inserting search keyword for Omicsoft compounds ... "
+        log.info "Start loading compounds into table search_keyword ... "
 
         qry = """ insert into search_keyword (bio_data_id, keyword, unique_id, data_category, display_data_category, source_code)
 				  select t2.bio_compound_id, t1.code_name, 'COM:'||t1.cas_registry, 'COMPOUND', 'Compound', 'Omicsoft'
-				  from ${biomart}.bio_compound t1, ${biomart}.bio_data_compound t2
+				  from bio_compound t1, bio_data_compound t2
 				  where t1.bio_compound_id=t2.bio_compound_id and t2.etl_source='OMICSOFT'
 					   and t1.code_name not in (select keyword from search_keyword)
 			  """
         searchapp.execute(qry)
 
-        log.info "Start loading search keyword for Omicsoft compounds ... "
+        log.info "Start loading compounds into table search_keyword ... "
     }
 
-
-    void loadOmicsoftDiseaseSearchKeyword(String biomart) {
+    /**
+     * load disease into search_keyword
+     *
+     * Make sure searchapp has read permission biomart.bio_disease and biomart.bio_data_disease
+     */
+    void insertSearchKeyword4Disease() {
 
         log.info "Start deleting search keyword for Omicsoft diseases ... "
 
@@ -204,27 +132,20 @@ class OracleSearchKeyword {
         //searchapp.execute(qry)
 
 
-        log.info "Start inserting search keyword for Omicsoft diseases ... "
+        log.info "Start loading diseases into table search_keyword  ... "
 
         qry = """ insert into search_keyword (bio_data_id, keyword, unique_id, data_category, display_data_category, source_code)
 				  select distinct t2.bio_disease_id, t1.disease, 'DIS:'||t1.mesh_code, 'DISEASE', 'Disease', ''
-				  from ${biomart}.bio_disease t1, ${biomart}.bio_data_disease t2
+				  from bio_disease t1, bio_data_disease t2
 				  where t1.bio_disease_id=t2.bio_disease_id and t2.etl_source='OMICSOFT'
 						and t1.disease not in (select keyword from search_keyword where data_category='DISEASE')
 			  """
+
         searchapp.execute(qry)
 
-        log.info "End loading search keyword for Omicsoft diseases ... "
+        log.info "End loading diseases into table search_keyword  ... "
     }
 
-
-    void loadOmicsoftCompoundSearchKeyword(String biomart) {
-
-        log.info "Start deleting search keyword for Omicsoft diseases ... "
-        //searchapp.execute(qry)
-
-        log.info "End loading search keyword for Omicsoft diseases ... "
-    }
 
 
     void insertSearchKeyword(String keyword, long bioDataId, String externalId) {
@@ -268,23 +189,4 @@ class OracleSearchKeyword {
         else return res[0]
     }
 
-
-    void setDisplayDataCategory(String displayDataCategory) {
-        this.displayDataCategory = displayDataCategory
-    }
-
-
-    void setSourceCode(String sourceCdoe) {
-        this.sourceCode = sourceCdoe
-    }
-
-
-    void setDataCategory(String dataCategory) {
-        this.dataCategory = dataCategory
-    }
-
-
-    void setSearchapp(Sql searchapp) {
-        this.searchapp = searchapp
-    }
 }

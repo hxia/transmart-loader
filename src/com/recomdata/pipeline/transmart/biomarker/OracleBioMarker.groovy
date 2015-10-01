@@ -27,24 +27,46 @@ class OracleBioMarker extends BioMarker {
     private static final Logger log = Logger.getLogger(OracleBioMarker)
 
     /**
+     * load Entrez genes using a temp table
+     */
+    void insertBioMarkers() {
+
+        log.info "Start loading Entrez genes into BIO_MARKER ..."
+
+        String qry = """ insert into bio_marker(bio_marker_name, bio_marker_description, organism, primary_source_code,
+								primary_external_id, bio_marker_type)
+						 select gene_symbol, gene_descr, organism, to_nchar('Entrez'), gene_id, to_nchar('GENE')
+						 from ${geneTable}
+                         minus
+						 select bio_marker_name, bio_marker_description, organism, primary_source_code,
+                                primary_external_id, bio_marker_type
+                         from bio_marker """
+
+        biomart.execute(qry)
+
+        log.info "End loading Entrez genes into BIO_MARKER ..."
+    }
+
+    /**
      * load genes(StringBuffer) (GENE_ID:GENE_NAME:GENE_DESCRIPTION) into bio_marker
      *
      * @param sb
      */
-    void insertGenes(StringBuffer sb) {
+    void insertBioMarker(ArrayList<String> genes) {
 
-        String qry = """insert into ${biomartSchemaName}.bio_marker(bio_marker_name, bio_marker_description, organism, primary_source_code, primary_external_id, bio_marker_type)
-                        values(?, ?, '$organism', '$geneSource', ?, '$geneType') """
+        String qry = """insert into bio_marker(bio_marker_id, bio_marker_name, bio_marker_description, organism, primary_source_code, primary_external_id, bio_marker_type)
+                        values(seq_bio_data_id.nextval, ?, ?, ?, '$primarySource', ?, '$markerType') """
 
-        if (sb.size() > 0) {
+        if (genes.size() > 0) {
             biomart.withTransaction {
                 biomart.withBatch(100, qry, { stmt ->
-                    sb.toString().eachLine {
+                    genes.each {
                         String[] str = it.split(/\t/)
                         stmt.addBatch([
-                                str[1].trim(),
                                 str[2].trim(),
-                                str[0].trim()
+                                str[3].trim(),
+                                str[0].trim(),
+                                str[1].trim()
                         ])
                     }
                 })
@@ -55,107 +77,74 @@ class OracleBioMarker extends BioMarker {
     }
 
 
-    void insertGenes(File sb) {
+    void insertBioMarker(String organism, String geneId, String geneSymbol, String description) {
 
-        String qry = """insert into ${biomartSchemaName}.bio_marker(bio_marker_name, bio_marker_description, organism, primary_source_code, primary_external_id, bio_marker_type)
-                        values(?, ?, $organism, $geneSource, ?, $geneType) """
+        String qry = """ insert into bio_marker(bio_marker_id, bio_marker_name, bio_marker_description, organism, primary_source_code,
+		                        primary_external_id, bio_marker_type) values(seq_bio_data_id.nextval, ?, ?, ?, ?, ?, ?) """
 
-        if (sb.size() > 0) {
-            biomart.withTransaction {
-                biomart.withBatch(100, qry, { stmt ->
-                    sb.eachLine {
-                        String[] str = it.split(/\t/)
-                        if (str.size() == 3) {
-                            stmt.addBatch([
-                                    str[0].trim(),
-                                    str[1].trim(),
-                                    str[2].trim()
-                            ])
-                        } else {
-                            log.info "improper line: $it"
-                        }
-                    }
-                })
-            }
+        if (isBioMarkerExist(geneId, markerType, organism)) {
+            log.info "\"$organism:$geneSymbol:$geneId:$markerType\" already exists in BIO_MARKER ..."
         } else {
-            log.error("No genes found.")
+            biomart.execute(qry, [geneSymbol, description, organism, primarySource, geneId, markerType])
         }
     }
 
 
-    void loadGenes(File gene) {
+    HashMap<String, String> getGene2BioMarkerMap(String markerType, String organism, String primarySource) {
 
-        if (gene.size() > 0) {
-            gene.eachLine {
-                String[] str = it.split("\t")
-                insertBioMarker(str[2], "", str[1], "", "GENE")
+        HashMap<String, String> gene2MarkerMap = new HashMap<String, String>()
+
+        String qry = """select bio_marker_id, primary_external_id from bio_marker
+                        where bio_marker_type=? and organism=? and primary_source_code=? and rownum < 100 """
+
+        try {
+            biomart.eachRow(qry, [markerType, organism, primarySource]) {
+                gene2MarkerMap[it.primary_external_id] = it.bio_marker_id
             }
-        } else {
-            log.info "Cannot find " + gene.toString()
+//              def rows = biomart.rows(qry, [markerType, organism, primarySource])
+
+            return gene2MarkerMap
+        } catch (e) {
+            return null
         }
     }
 
+    /**
+     * check if Entrez genes for a species are loaded already
+     *
+     * @param markerType
+     * @param organism
+     * @return
+     */
+    boolean isBioMarkerExist(String markerType, String organism) {
 
-    void loadGeneOntologyGenes(File gene, Map geneId) {
+        String qry = "select count(1) from bio_marker where bio_marker_type=? and organism=?"
 
-        Map genes = [:]
-
-        if (gene.size() > 0) {
-            log.info "Start loading ${gene.toString()} into BIO_MARKER ... "
-            gene.eachLine {
-                String[] str = it.split("\t")
-                genes[str[1].trim()] = 1
-            }
-
-            genes.each { k, v ->
-                if (!geneId[k.toString().toUpperCase()].equals(null)) {
-                    insertBioMarker(k, "", (String) geneId[k.toString().toUpperCase()], "GO", "GENE")
-                }
-            }
-        } else {
-            log.info "Cannot find " + gene.toString()
+        try {
+            def res = biomart.firstRow(qry, [markerType, organism])
+            if (res[0] >= 1) return true else return false
+        } catch (e) {
+            return false
         }
     }
 
+    /**
+     * check if an Entrez gene is already loaded
+     *
+     * @param geneId
+     * @param markerType
+     * @param organism
+     * @return
+     */
+    boolean isBioMarkerExist(String geneId, String markerType, String organism) {
 
-    void loadPathways(File pathway, String source) {
+        String qry = "select count(1) from bio_marker where primary_external_id=? and organism=? and bio_marker_type=?"
 
-        if (pathway.size() > 0) {
-            pathway.eachLine {
-                String[] str = it.split("\t")
-                insertBioMarker(str[1], str[1], str[0], source, "PATHWAY")
-            }
-        } else {
-            log.info "Cannot find " + pathway.toString()
+        try {
+            def res = biomart.firstRow(qry, [geneId, organism, markerType])
+            if (res[0] >= 1) return true else return false
+        } catch (e) {
+            return false
         }
-    }
-
-
-    void insertBioMarker(String geneSymbol, String description, String geneId, String source, String markerType) {
-
-        String qry = """ insert into ${biomartSchemaName}.bio_marker(bio_marker_name, bio_marker_description, organism, primary_source_code,
-		                        primary_external_id, bio_marker_type) values(?, ?, ?, ?, ?, ?) """
-
-        if (isBioMarkerExist(geneId, markerType)) {
-            log.info "$organism:$geneSymbol:$geneId:$markerType already exists in BIO_MARKER ..."
-        } else {
-            log.info "Insert $organism:$geneSymbol:$geneId:$markerType into BIO_MARKER ..."
-            biomart.execute(qry, [
-                    geneSymbol,
-                    description,
-                    organism,
-                    source,
-                    geneId,
-                    markerType
-            ])
-        }
-    }
-
-
-    boolean isBioMarkerExist(String geneId, String markerType) {
-        String qry = "select count(*) from ${biomartSchemaName}.bio_marker where primary_external_id=? and organism=? and bio_marker_type=?"
-        def res = biomart.firstRow(qry, [geneId, organism, markerType])
-        if (res[0] > 0) return true
-        else return false
     }
 }

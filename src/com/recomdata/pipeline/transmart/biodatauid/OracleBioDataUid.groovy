@@ -21,24 +21,48 @@
 
 package com.recomdata.pipeline.transmart.biodatauid
 
-import groovy.sql.Sql;
+import org.apache.log4j.Logger
 
-import org.apache.log4j.Logger;
-
-class OracleBioDataUid {
+class OracleBioDataUid extends BioDataUid {
 
 	private static final Logger log = Logger.getLogger(OracleBioDataUid)
 
-	Sql biomart
 
-	void loadBioDataUid(){
-		loadExperimentBioDataUid()
-		loadAnalysisBioDataUid()
-		loadDiseaseBioDataUid()
-	}
+    void insertEntrezBioDataUid(){
 
+        log.info "Start inserting BIO_DATA_UID for Entrez genes (BIO_MARKER) ... "
 
-	void loadExperimentBioDataUid(){
+        String qry = """ insert into bio_data_uid(bio_data_id, unique_id, bio_data_type)
+						 select bio_marker_id, 'GENE:'||primary_external_id, to_nchar('BIO_MARKER.GENE')
+						 from bio_marker
+						 where primary_source_code='Entrez' and bio_marker_type='GENE'
+						 minus
+						 select bio_data_id, unique_id, bio_data_type
+						 from bio_data_uid """
+
+        biomart.execute(qry)
+
+        log.info "End inserting BIO_DATA_UID for Entrez genes (BIO_MARKER) ... "
+    }
+
+    void insertEntrezBioDataUid(String organism){
+
+        log.info "Start inserting BIO_DATA_UID for Entrez genes (BIO_MARKER) ... "
+
+        String qry = """ insert into bio_data_uid(bio_data_id, unique_id, bio_data_type)
+						 select bio_marker_id, 'GENE:'||primary_external_id, to_nchar('BIO_MARKER.GENE')
+						 from bio_marker
+						 where upper(organism)=? and primary_source_code='Entrez' and bio_marker_type='GENE'
+						 minus
+						 select bio_data_id, unique_id, bio_data_type
+						 from bio_data_uid """
+
+        biomart.execute(qry, [organism])
+
+        log.info "End inserting BIO_DATA_UID for Entrez genes (BIO_MARKER) ... "
+    }
+
+	void insertExperimentBioDataUid(){
 
 		log.info "Start inserting BIO_DATA_UID for BIO_EXPERIMENT ... "
 
@@ -52,8 +76,7 @@ class OracleBioDataUid {
 		log.info "Stop inserting BIO_DATA_UID for BIO_EXPERIMENT ... "
 	}
 
-
-	void loadAnalysisBioDataUid(){
+	void insertAnalysisBioDataUid(){
 
 		log.info "Start inserting BIO_DATA_UID for BIO_ASSAY_ANALYSIS ... "
 
@@ -67,8 +90,7 @@ class OracleBioDataUid {
 		log.info "Stop inserting into BIO_DATA_UID for BIO_ASSAY_ANALYSIS ... "
 	}
 
-	
-	void loadDiseaseBioDataUid(){
+	void insertDiseaseBioDataUid(){
 
 		log.info "Start inserting BIO_DATA_UID for BIO_DISEASE ... "
 
@@ -82,8 +104,7 @@ class OracleBioDataUid {
 		log.info "Stop inserting BIO_DATA_UID for BIO_DISEASE ... "
 	}
 
-	
-	void loadBioDataUid(long bioDataId, String uniqueId, String dataType){
+	void insertBioDataUid(long bioDataId, String uniqueId, String dataType){
 
 		if(isBioDataUidExist(bioDataId, uniqueId, dataType)){
 			log.info "($bioDataId, $uniqueId, $dataType) already exists in BIO_DATA_UID ..."
@@ -101,7 +122,6 @@ class OracleBioDataUid {
 		}
 	}
 
-
 	boolean isBioDataUidExist(long bioDataId, String uniqueId, String dataType){
 		String qry = "select count(1) from bio_data_uid where bio_data_id=? and unique_id=? and data_type=?"
 		if(biomart.firstRow(qry, [
@@ -115,8 +135,4 @@ class OracleBioDataUid {
 		}
 	}
 
-	
-	void setBiomart(Sql biomart){
-		this.biomart = biomart
-	}
 }

@@ -20,42 +20,14 @@
 
 package com.recomdata.pipeline.transmart.searchkeywordterm
 
-import groovy.sql.Sql
 import org.apache.log4j.Logger
 
-class OracleSearchKeywordTerm {
+class OracleSearchKeywordTerm extends SearchKeywordTerm{
 
     private static final Logger log = Logger.getLogger(OracleSearchKeywordTerm)
 
-    Sql searchapp
 
-    void loadSearchKeywordTerm(String databaseType) {
-        if (databaseType.equals("oracle")) {
-            loadSearchKeywordTerm()
-        } else if (databaseType.equals("netezza")) {
-            loadNetezzaSearchKeywordTerm()
-        } else {
-            log.info "Database $databaseType is not supported."
-        }
-    }
-
-
-    void loadNetezzaSearchKeywordTerm() {
-
-        log.info "Start populating SEARCH_KEYWORD_TERM using data from SEARCH_KEYWORD ... "
-
-        String qry = """ insert into search_keyword_term (SEARCH_KEYWORD_TERM_ID, KEYWORD_TERM, SEARCH_KEYWORD_ID, RANK,TERM_LENGTH)
-	                 select next value for SEQ_SEARCH_DATA_ID,upper(keyword), search_keyword_id, 1, length(keyword)
-	 				 from search_keyword
-	 				 where search_keyword_id not in
-	 			 			(select search_keyword_id from searchapp.search_keyword_term)
-	 			    """
-        searchapp.execute(qry)
-
-        log.info "End populating SEARCH_KEYWORD_TERM using data from SEARCH_KEYWORD ... "
-    }
-
-    void loadSearchKeywordTerm() {
+    void insertSearchKeywordTerm() {
 
         log.info "Start populating SEARCH_KEYWORD_TERM using data from SEARCH_KEYWORD ... "
 
@@ -100,8 +72,4 @@ class OracleSearchKeywordTerm {
         else return false
     }
 
-
-    void setSearchapp(Sql searchapp) {
-        this.searchapp = searchapp
-    }
 }

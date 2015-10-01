@@ -20,12 +20,8 @@
  ******************************************************************/
 
 
-package com.recomdata.pipeline.transmart.searchkeyword
+package com.recomdata.pipeline.transmart.searchkeywordterm
 
-import com.recomdata.pipeline.transmart.searchkeywordterm.NetezzaSearchKeywordTerm
-import com.recomdata.pipeline.transmart.searchkeywordterm.OracleSearchKeywordTerm
-import com.recomdata.pipeline.transmart.searchkeywordterm.PostgresqlSearchKeywordTerm
-import com.recomdata.pipeline.transmart.searchkeywordterm.SearchKeywordTerm
 import com.recomdata.pipeline.util.Util
 import groovy.sql.Sql
 import org.apache.log4j.Logger

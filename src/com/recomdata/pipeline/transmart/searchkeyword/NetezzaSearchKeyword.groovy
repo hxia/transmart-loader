@@ -21,15 +21,11 @@
 
 package com.recomdata.pipeline.transmart.searchkeyword
 
-import groovy.sql.Sql
 import org.apache.log4j.Logger
 
 class NetezzaSearchKeyword {
 
     private static final Logger log = Logger.getLogger(NetezzaSearchKeyword)
-
-    Sql searchapp
-    String dataCategory, sourceCode, displayDataCategory
 
     void loadPathwaySearchKeyword(String databaseType, String primarySourceCode) {
         if (databaseType.equals("oracle")) {
@@ -268,23 +264,4 @@ class NetezzaSearchKeyword {
         else return res[0]
     }
 
-
-    void setDisplayDataCategory(String displayDataCategory) {
-        this.displayDataCategory = displayDataCategory
-    }
-
-
-    void setSourceCode(String sourceCdoe) {
-        this.sourceCode = sourceCdoe
-    }
-
-
-    void setDataCategory(String dataCategory) {
-        this.dataCategory = dataCategory
-    }
-
-
-    void setSearchapp(Sql searchapp) {
-        this.searchapp = searchapp
-    }
 }

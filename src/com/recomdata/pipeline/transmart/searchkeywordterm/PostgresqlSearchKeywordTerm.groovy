@@ -20,25 +20,11 @@
 
 package com.recomdata.pipeline.transmart.searchkeywordterm
 
-import groovy.sql.Sql
 import org.apache.log4j.Logger
 
-class PostgresqlSearchKeywordTerm {
+class PostgresqlSearchKeywordTerm extends SearchKeywordTerm {
 
     private static final Logger log = Logger.getLogger(PostgresqlSearchKeywordTerm)
-
-    Sql searchapp
-
-    void loadSearchKeywordTerm(String databaseType) {
-        if (databaseType.equals("oracle")) {
-            loadSearchKeywordTerm()
-        } else if (databaseType.equals("netezza")) {
-            loadNetezzaSearchKeywordTerm()
-        } else {
-            log.info "Database $databaseType is not supported."
-        }
-    }
-
 
     void loadNetezzaSearchKeywordTerm() {
 
@@ -55,7 +41,8 @@ class PostgresqlSearchKeywordTerm {
         log.info "End populating SEARCH_KEYWORD_TERM using data from SEARCH_KEYWORD ... "
     }
 
-    void loadSearchKeywordTerm() {
+
+    void insertSearchKeywordTerm() {
 
         log.info "Start populating SEARCH_KEYWORD_TERM using data from SEARCH_KEYWORD ... "
 
@@ -100,8 +87,4 @@ class PostgresqlSearchKeywordTerm {
         else return false
     }
 
-
-    void setSearchapp(Sql searchapp) {
-        this.searchapp = searchapp
-    }
 }
